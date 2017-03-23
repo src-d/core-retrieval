@@ -2,6 +2,7 @@
 PROJECT = core-retrieval
 COMMANDS =
 CODECOV_TOKEN = be2260be-6571-4759-b983-6828172c36cd 
+SRCD_WORKS = true
 
 # Including devops Makefile
 MAKEFILE = Makefile.main
