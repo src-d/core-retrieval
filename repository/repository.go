@@ -7,10 +7,11 @@ import (
 	"os"
 	"time"
 
-	"srcd.works/go-billy.v1"
-	"srcd.works/go-git.v4"
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-billy.v2"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/storage"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
 // RootedTransactioner can initiate transactions on rooted repositories.
@@ -24,7 +25,7 @@ type RootedTransactioner interface {
 type Tx interface {
 	// Storer gets the repository storer. It returns the same instance on
 	// every call until Commit or Rollback is performed.
-	Storer() git.Storer
+	Storer() storage.Storer
 	// Commit commits all changes to the repository.
 	Commit() error
 	// Rollback undoes any changes and cleans up.
@@ -78,10 +79,10 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 type fsTx struct {
 	fs, local         billy.Filesystem
 	tmpPath, origPath string
-	s                 git.Storer
+	s                 storage.Storer
 }
 
-func (tx *fsTx) Storer() git.Storer {
+func (tx *fsTx) Storer() storage.Storer {
 	return tx.s
 }
 
