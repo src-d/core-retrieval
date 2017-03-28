@@ -67,6 +67,10 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 		}
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	return &fsTx{
 		fs:       s.fs,
 		local:    s.local,
