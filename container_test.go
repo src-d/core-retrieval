@@ -23,3 +23,13 @@ func TestModelMentionStore(t *testing.T) {
 	s2 := ModelMentionStore()
 	require.Exactly(s, s2)
 }
+
+func TestFilesystemRootedTransactioner(t *testing.T) {
+	require := require.New(t)
+
+	fs := FilesystemRootedTransactioner()
+	require.NotNil(fs)
+
+	fs2 := FilesystemRootedTransactioner()
+	require.Exactly(fs, fs2)
+}
