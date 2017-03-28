@@ -117,12 +117,8 @@ func copyRecursive(fromFs, toFs billy.Filesystem, from, to string) (err error) {
 		return err
 	}
 
-	if srcInfo.Mode().IsRegular() {
-		return copyFile(fromFs, toFs, from, to)
-	}
-
 	if !srcInfo.IsDir() {
-		return fmt.Errorf("not a regular file or dir: %s", from)
+		return copyFile(fromFs, toFs, from, to)
 	}
 
 	fis, err := fromFs.ReadDir(from)
@@ -133,14 +129,8 @@ func copyRecursive(fromFs, toFs billy.Filesystem, from, to string) (err error) {
 	for _, fi := range fis {
 		fromPath := fromFs.Join(from, fi.Name())
 		toPath := toFs.Join(to, fi.Name())
-		if fi.IsDir() {
-			err := copyRecursive(fromFs, toFs, fromPath, toPath)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := copyFile(fromFs, toFs, fromPath, toPath); err != nil {
+		err := copyRecursive(fromFs, toFs, fromPath, toPath)
+		if err != nil {
 			return err
 		}
 	}

@@ -1,12 +1,9 @@
 package repository
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -71,56 +68,6 @@ func (s *FilesystemSuite) Test() {
 	}
 }
 
-type invalidStatFs struct {
-	billy.Filesystem
-	statCalls int
-}
-
-func (fs *invalidStatFs) Stat(path string) (billy.FileInfo, error) {
-	fs.statCalls += 1
-	return nil, fmt.Errorf("mock error")
-}
-
-func (s *FilesystemSuite) TestInvalidStatFilesystem() {
-	fs := &invalidStatFs{Filesystem: s.newFilesystem()}
-	srv := NewFilesystemRootedTransactioner(fs, memfs.New())
-	tx, err := srv.Begin(h1)
-	s.EqualError(err, "mock error")
-	s.Equal(1, fs.statCalls)
-	s.Nil(tx)
-}
-
-type nonRegularFs struct {
-	billy.Filesystem
-	statCalls int
-}
-
-type nonRegularFileInfo struct {
-	Path string
-}
-
-func (f *nonRegularFileInfo) Name() string       { return f.Path }
-func (f *nonRegularFileInfo) Size() int64        { return 0 }
-func (f *nonRegularFileInfo) Mode() os.FileMode  { return os.ModeNamedPipe }
-func (f *nonRegularFileInfo) ModTime() time.Time { return time.Now() }
-func (f *nonRegularFileInfo) IsDir() bool        { return false }
-func (f *nonRegularFileInfo) Sys() interface{}   { return nil }
-
-func (fs *nonRegularFs) Stat(path string) (billy.FileInfo, error) {
-	fs.statCalls += 1
-	return &nonRegularFileInfo{path}, nil
-}
-
-func (s *FilesystemSuite) TestNonRegularFileFilesystem() {
-	fs := &nonRegularFs{Filesystem: s.newFilesystem()}
-	srv := NewFilesystemRootedTransactioner(fs, memfs.New())
-	tx, err := srv.Begin(h1)
-	s.Error(err)
-	s.True(strings.HasPrefix(err.Error(), "not a regular file or dir"))
-	s.Equal(1, fs.statCalls)
-	s.Nil(tx)
-}
-
 func (s *FilesystemSuite) newFilesystem() billy.Filesystem {
 	require := require.New(s.T())
 	tmpDir, err := ioutil.TempDir(os.TempDir(), tmpPrefix)
@@ -180,7 +127,7 @@ func testRootedTransactioner(t *testing.T, s RootedTransactioner) {
 	tx3, err := s.Begin(h1)
 	require.NoError(err)
 	require.NotNil(tx3)
-	r3, err := git.Open(tx1.Storer(), nil)
+	r3, err := git.Open(tx3.Storer(), nil)
 	require.NoError(err)
 
 	// ref1 visible in tx3
