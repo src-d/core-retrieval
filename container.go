@@ -59,7 +59,7 @@ func ModelMentionStore() *model.MentionStore {
 func RootedTransactioner() repository.RootedTransactioner {
 	if container.RootedTransactioner == nil {
 		container.RootedTransactioner =
-			repository.NewFilesystemRootedTransactioner(
+			repository.NewSivaRootedTransactioner(
 				osfs.New(config.RootRepositoriesDir),
 				core.TemporaryFilesystem().Dir(transactionerLocalDir),
 			)
