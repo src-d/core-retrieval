@@ -2,11 +2,13 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
+	"gopkg.in/src-d/go-billy-siva.v0"
 	"gopkg.in/src-d/go-billy.v2"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -37,26 +39,28 @@ type fsSrv struct {
 	local billy.Filesystem
 }
 
-// NewFilesystemRootedTransactioner returns a RootedTransactioner for repositories
-// stored in the given billy.Filesystem, and uses a second billy.Filesystem
-// as temporary storage for in-progress transactions.
+// NewSivaRootedTransactioner returns a RootedTransactioner for repositories
+// stored in the given billy.Filesystem (using siva file format), and uses a
+// second billy.Filesystem as temporary storage for in-progress transactions.
 //
 // Note that transactionality is not fully guaranteed by this implementation,
-// since it relies on recursive copying between arbitrary filesystems. If a
+// since it relies on copying between arbitrary filesystems. If a
 // Commit operation fails, the state of the first filesystem is unknown and can
 // be invalid.
-func NewFilesystemRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner {
+func NewSivaRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner {
 	return &fsSrv{fs, local}
 }
 
 func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
-	origPath := h.String()
-	tmpPath := fmt.Sprintf("%s/%d", h.String(), time.Now().UnixNano())
-	if err := copyRecursive(s.fs, s.local, origPath, tmpPath); err != nil {
+	origPath := fmt.Sprintf("%s.siva", h)
+	tmpPath := fmt.Sprintf("%s/%d.siva", h, time.Now().UnixNano())
+
+	if err := copyFile(s.fs, s.local, origPath, tmpPath); err != nil {
 		return nil, err
 	}
 
-	sto, err := filesystem.NewStorage(s.local.Dir(tmpPath))
+	sfs := sivafs.New(s.local, tmpPath)
+	sto, err := filesystem.NewStorage(sfs)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +78,7 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	return &fsTx{
 		fs:       s.fs,
 		local:    s.local,
+		sivafs:   sfs,
 		origPath: origPath,
 		tmpPath:  tmpPath,
 		s:        sto,
@@ -81,7 +86,7 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 }
 
 type fsTx struct {
-	fs, local         billy.Filesystem
+	fs, local, sivafs billy.Filesystem
 	tmpPath, origPath string
 	s                 storage.Storer
 }
@@ -91,7 +96,16 @@ func (tx *fsTx) Storer() storage.Storer {
 }
 
 func (tx *fsTx) Commit() error {
-	if err := copyRecursive(tx.local, tx.fs, tx.tmpPath, tx.origPath); err != nil {
+	c, ok := tx.sivafs.(sivafs.Syncer)
+	if !ok {
+		return errors.New("filesystem not synchronizable")
+	}
+
+	if err := c.Sync(); err != nil {
+		return err
+	}
+
+	if err := copyFile(tx.local, tx.fs, tx.tmpPath, tx.origPath); err != nil {
 		_ = tx.cleanUp()
 		return err
 	}
@@ -107,39 +121,12 @@ func (tx *fsTx) cleanUp() error {
 	return billy.RemoveAll(tx.local, tx.tmpPath)
 }
 
-func copyRecursive(fromFs, toFs billy.Filesystem, from, to string) (err error) {
-	srcInfo, err := fromFs.Stat(from)
+func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
+	src, err := fromFs.Open(from)
 	if os.IsNotExist(err) {
 		return nil
 	}
 
-	if err != nil {
-		return err
-	}
-
-	if !srcInfo.IsDir() {
-		return copyFile(fromFs, toFs, from, to)
-	}
-
-	fis, err := fromFs.ReadDir(from)
-	if err != nil {
-		return err
-	}
-
-	for _, fi := range fis {
-		fromPath := fromFs.Join(from, fi.Name())
-		toPath := toFs.Join(to, fi.Name())
-		err := copyRecursive(fromFs, toFs, fromPath, toPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
-	src, err := fromFs.Open(from)
 	if err != nil {
 		return err
 	}
