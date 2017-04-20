@@ -63,7 +63,7 @@ func (s *FilesystemSuite) Test() {
 
 	for _, fsPair := range fsPairs {
 		s.T().Run(fsPair.Name, func(t *testing.T) {
-			testRootedTransactioner(t, NewFilesystemRootedTransactioner(fsPair.From, fsPair.To))
+			testRootedTransactioner(t, NewSivaRootedTransactioner(fsPair.From, fsPair.To))
 		})
 	}
 }

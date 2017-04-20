@@ -39,15 +39,15 @@ type fsSrv struct {
 	local billy.Filesystem
 }
 
-// NewFilesystemRootedTransactioner returns a RootedTransactioner for repositories
-// stored in the given billy.Filesystem, and uses a second billy.Filesystem
-// as temporary storage for in-progress transactions.
+// NewSivaRootedTransactioner returns a RootedTransactioner for repositories
+// stored in the given billy.Filesystem (using siva file format), and uses a
+// second billy.Filesystem as temporary storage for in-progress transactions.
 //
 // Note that transactionality is not fully guaranteed by this implementation,
-// since it relies on recursive copying between arbitrary filesystems. If a
+// since it relies on copying between arbitrary filesystems. If a
 // Commit operation fails, the state of the first filesystem is unknown and can
 // be invalid.
-func NewFilesystemRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner {
+func NewSivaRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner {
 	return &fsSrv{fs, local}
 }
 
