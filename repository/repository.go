@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/src-d/go-billy-siva.v0"
 	"gopkg.in/src-d/go-billy.v2"
+	"gopkg.in/src-d/go-billy.v2/tmpoverlayfs"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage"
@@ -60,7 +61,8 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	}
 
 	sfs := sivafs.New(s.local, tmpPath)
-	sto, err := filesystem.NewStorage(sfs)
+	overfs := tmpfs.New(sfs, s.local.Dir("siva-temp-files"))
+	sto, err := filesystem.NewStorage(overfs)
 	if err != nil {
 		return nil, err
 	}
