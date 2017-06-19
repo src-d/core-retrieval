@@ -6,7 +6,7 @@ import (
 	"srcd.works/core-retrieval.v0/model"
 	"srcd.works/core-retrieval.v0/repository"
 
-	"gopkg.in/src-d/go-billy.v2/osfs"
+	"gopkg.in/src-d/go-billy.v3/osfs"
 	"srcd.works/core.v0"
 	"srcd.works/framework.v0/configurable"
 	"srcd.works/framework.v0/database"
@@ -58,10 +58,15 @@ func ModelMentionStore() *model.MentionStore {
 // create the transactioner is the default TemporaryFilesystem from core container.
 func RootedTransactioner() repository.RootedTransactioner {
 	if container.RootedTransactioner == nil {
+		tmpFs, err := core.TemporaryFilesystem().Chroot(transactionerLocalDir)
+		if err != nil {
+			panic(err)
+		}
+
 		container.RootedTransactioner =
 			repository.NewSivaRootedTransactioner(
 				osfs.New(config.RootRepositoriesDir),
-				core.TemporaryFilesystem().Dir(transactionerLocalDir),
+				tmpFs,
 			)
 	}
 

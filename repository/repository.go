@@ -2,15 +2,16 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"gopkg.in/src-d/go-billy-siva.v0"
-	"gopkg.in/src-d/go-billy.v2"
-	"gopkg.in/src-d/go-billy.v2/tmpoverlayfs"
+	"gopkg.in/src-d/go-billy.v3"
+	"gopkg.in/src-d/go-billy.v3/helper/chroot"
+	"gopkg.in/src-d/go-billy.v3/helper/temporal"
+	"gopkg.in/src-d/go-billy.v3/util"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage"
@@ -60,9 +61,11 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 		return nil, err
 	}
 
-	sfs := sivafs.New(s.local, tmpPath)
-	overfs := tmpfs.New(sfs, s.local.Dir("siva-temp-files"))
-	sto, err := filesystem.NewStorage(overfs)
+	sivaFs := sivafs.New(s.local, tmpPath)
+	chrootFs := chroot.New(sivaFs, s.local.Root())
+	temporalFs := temporal.New(chrootFs, s.local.Join("siva-temp-files"))
+
+	sto, err := filesystem.NewStorage(temporalFs)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +83,7 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	return &fsTx{
 		fs:       s.fs,
 		local:    s.local,
-		sivafs:   sfs,
+		sivafs:   sivaFs,
 		origPath: origPath,
 		tmpPath:  tmpPath,
 		s:        sto,
@@ -88,7 +91,8 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 }
 
 type fsTx struct {
-	fs, local, sivafs billy.Filesystem
+	fs, local         billy.Filesystem
+	sivafs            sivafs.SivaFS
 	tmpPath, origPath string
 	s                 storage.Storer
 }
@@ -98,12 +102,7 @@ func (tx *fsTx) Storer() storage.Storer {
 }
 
 func (tx *fsTx) Commit() error {
-	c, ok := tx.sivafs.(sivafs.Syncer)
-	if !ok {
-		return errors.New("filesystem not synchronizable")
-	}
-
-	if err := c.Sync(); err != nil {
+	if err := tx.sivafs.Sync(); err != nil {
 		return err
 	}
 
@@ -120,7 +119,7 @@ func (tx *fsTx) Rollback() error {
 }
 
 func (tx *fsTx) cleanUp() error {
-	return billy.RemoveAll(tx.local, tx.tmpPath)
+	return util.RemoveAll(tx.local, tx.tmpPath)
 }
 
 func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
