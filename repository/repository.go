@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/src-d/go-billy-siva.v0"
+	"gopkg.in/src-d/go-billy-siva.v1"
 	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-billy.v3/helper/chroot"
 	"gopkg.in/src-d/go-billy.v3/helper/temporal"
