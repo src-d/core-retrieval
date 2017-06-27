@@ -1,19 +1,23 @@
 # Package configuration
-PROJECT = core-retrieval
+PROJECT = core-retireval
 COMMANDS =
-CODECOV_TOKEN = be2260be-6571-4759-b983-6828172c36cd 
-SRCD_WORKS = true
 
-# Including devops Makefile
+# Including ci Makefile
 MAKEFILE = Makefile.main
-DEVOPS_REPOSITORY = https://github.com/src-d/devops.git
-DEVOPS_FOLDER = .devops
+CI_REPOSITORY = https://github.com/src-d/ci.git
 CI_FOLDER = .ci
 
 $(MAKEFILE):
-	@git clone --quiet $(DEVOPS_REPOSITORY) $(DEVOPS_FOLDER); \
-	cp -r $(DEVOPS_FOLDER)/ci .ci; \
-	rm -rf $(DEVOPS_FOLDER); \
+	@git clone --quiet $(CI_REPOSITORY) $(CI_FOLDER); \
 	cp $(CI_FOLDER)/$(MAKEFILE) .;
 
 -include $(MAKEFILE)
+
+ensure-models-generated:
+	go get -v -u `go list -f '{{ join .Deps  "\n"}}' . | grep kallax | grep -v types`; \
+	go generate ./...; \
+	git --no-pager diff; \
+	if [ `git status | grep 'Changes not staged for commit' | wc -l` != '0' ]; then \
+		echo 'There are differences between the commited kallax.go and the one(s) generated right now'; \
+		exit 2; \
+	fi; \

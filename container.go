@@ -3,13 +3,13 @@ package core_retrieval
 import (
 	"database/sql"
 
-	"srcd.works/core-retrieval.v0/model"
-	"srcd.works/core-retrieval.v0/repository"
+	"gopkg.in/src-d/core-retrieval.v0/model"
+	"gopkg.in/src-d/core-retrieval.v0/repository"
 
+	"gopkg.in/src-d/core.v0"
+	"gopkg.in/src-d/framework.v0/configurable"
+	"gopkg.in/src-d/framework.v0/database"
 	"gopkg.in/src-d/go-billy.v3/osfs"
-	"srcd.works/core.v0"
-	"srcd.works/framework.v0/configurable"
-	"srcd.works/framework.v0/database"
 )
 
 const transactionerLocalDir = "transactioner"
