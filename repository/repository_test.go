@@ -1,17 +1,21 @@
 package repository
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/src-d/go-git-fixtures"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-billy.v3/memfs"
 	"gopkg.in/src-d/go-billy.v3/osfs"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 const (
@@ -32,11 +36,13 @@ type FilesystemSuite struct {
 }
 
 func (s *FilesystemSuite) SetupTest() {
+	s.NoError(fixtures.Init())
 	s.tmpDirs = make(map[string]bool)
 }
 
 func (s *FilesystemSuite) TearDownTest() {
 	s.cleanUpTempDirectories()
+	s.NoError(fixtures.Clean())
 }
 
 func (s *FilesystemSuite) cleanUpTempDirectories() {
@@ -65,6 +71,10 @@ func (s *FilesystemSuite) Test() {
 		s.T().Run(fsPair.Name, func(t *testing.T) {
 			testRootedTransactioner(t, NewSivaRootedTransactioner(fsPair.From, fsPair.To))
 		})
+
+		s.T().Run(fmt.Sprintf("%s with real repository", fsPair.Name), func(t *testing.T) {
+			testWithRealRepository(t, NewSivaRootedTransactioner(fsPair.From, fsPair.To))
+		})
 	}
 }
 
@@ -74,6 +84,77 @@ func (s *FilesystemSuite) newFilesystem() billy.Filesystem {
 	require.NoError(err)
 	s.tmpDirs[tmpDir] = true
 	return osfs.New(tmpDir)
+}
+
+func testWithRealRepository(t *testing.T, s RootedTransactioner) {
+	require := require.New(t)
+
+	f := fixtures.Basic().ByTag("worktree").One()
+
+	rTest, err := git.PlainOpen(f.Worktree().Root())
+	require.NoError(err)
+
+	oIterTest, err := rTest.CommitObjects()
+	require.NoError(err)
+
+	countTest := 0
+	err = oIterTest.ForEach(func(o *object.Commit) error {
+		countTest++
+		return nil
+	})
+	require.NoError(err)
+	require.NotEqual(0, countTest)
+
+	tx, err := s.Begin(f.Head)
+	require.NoError(err)
+
+	r, err := git.Open(tx.Storer(), nil)
+	require.NoError(err)
+	_, err = r.CreateRemote(&config.RemoteConfig{
+		URL:  f.Worktree().Root(),
+		Name: git.DefaultRemoteName,
+	})
+	require.NoError(err)
+
+	err = r.Fetch(&git.FetchOptions{
+		RefSpecs: []config.RefSpec{config.RefSpec("+refs/heads/*:refs/heads/*")},
+	})
+	require.NoError(err)
+
+	cIter, err := r.CommitObjects()
+	require.NoError(err)
+
+	count := 0
+	err = cIter.ForEach(func(o *object.Commit) error {
+		count++
+		return nil
+	})
+	require.NoError(err)
+	require.NotEqual(0, count)
+
+	err = tx.Commit()
+	require.NoError(err)
+
+	tx2, err := s.Begin(f.Head)
+	require.NoError(err)
+
+	r, err = git.Open(tx2.Storer(), nil)
+	require.NoError(err)
+
+	cIter, err = r.CommitObjects()
+	require.NoError(err)
+
+	count2 := 0
+	err = cIter.ForEach(func(o *object.Commit) error {
+		count2++
+		return nil
+	})
+	require.NoError(err)
+	require.NotEqual(0, count)
+
+	require.Equal(count, count2)
+	err = tx2.Rollback()
+	require.NoError(err)
 }
 
 func testRootedTransactioner(t *testing.T, s RootedTransactioner) {

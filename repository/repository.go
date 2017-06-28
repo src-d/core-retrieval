@@ -7,10 +7,8 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/src-d/go-billy-siva.v1"
+	"gopkg.in/src-d/go-billy-siva.v2"
 	"gopkg.in/src-d/go-billy.v3"
-	"gopkg.in/src-d/go-billy.v3/helper/chroot"
-	"gopkg.in/src-d/go-billy.v3/helper/temporal"
 	"gopkg.in/src-d/go-billy.v3/util"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -61,11 +59,12 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 		return nil, err
 	}
 
-	sivaFs := sivafs.New(s.local, tmpPath)
-	chrootFs := chroot.New(sivaFs, s.local.Root())
-	temporalFs := temporal.New(chrootFs, s.local.Join("siva-temp-files"))
+	fs, err := sivafs.NewFilesystem(s.local, tmpPath)
+	if err != nil {
+		return nil, err
+	}
 
-	sto, err := filesystem.NewStorage(temporalFs)
+	sto, err := filesystem.NewStorage(fs)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +82,7 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	return &fsTx{
 		fs:       s.fs,
 		local:    s.local,
-		sivafs:   sivaFs,
+		sivafs:   fs,
 		origPath: origPath,
 		tmpPath:  tmpPath,
 		s:        sto,
@@ -133,7 +132,7 @@ func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
 	}
 	defer checkClose(src, &err)
 
-	dst, err := toFs.OpenFile(to, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644))
+	dst, err := toFs.OpenFile(to, os.O_CREATE | os.O_TRUNC | os.O_WRONLY, os.FileMode(0644))
 	if err != nil {
 		return err
 	}
