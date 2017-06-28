@@ -11,13 +11,6 @@ matrix:
   allow_failures:
     - go: tip
 
-sudo: required
-
-services:
-  - docker
-  - rabbitmq
-  - postgresql
-
 install:
   - make dependencies
 
