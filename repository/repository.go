@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
-	"gopkg.in/src-d/go-billy-siva.v2"
+	"gopkg.in/src-d/go-billy-siva.v3"
 	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-billy.v3/util"
 	"gopkg.in/src-d/go-git.v4"
@@ -53,13 +54,20 @@ func NewSivaRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner 
 
 func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	origPath := fmt.Sprintf("%s.siva", h)
-	tmpPath := fmt.Sprintf("%s/%d.siva", h, time.Now().UnixNano())
+	localPath := s.local.Join(h.String(), strconv.FormatInt(time.Now().UnixNano(), 10))
+	localSivaPath := localPath+ ".siva"
+	localTmpPath := localPath + ".tmp"
 
-	if err := copyFile(s.fs, s.local, origPath, tmpPath); err != nil {
+	if err := copyFile(s.fs, s.local, origPath, localSivaPath); err != nil {
 		return nil, err
 	}
 
-	fs, err := sivafs.NewFilesystem(s.local, tmpPath)
+	tmpFs, err := s.local.Chroot(localTmpPath)
+	if err != nil {
+		return nil, err
+	}
+
+	fs, err := sivafs.NewFilesystem(s.local, localSivaPath, tmpFs)
 	if err != nil {
 		return nil, err
 	}
@@ -84,14 +92,14 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 		local:    s.local,
 		sivafs:   fs,
 		origPath: origPath,
-		tmpPath:  tmpPath,
+		tmpPath:  localSivaPath,
 		s:        sto,
 	}, nil
 }
 
 type fsTx struct {
 	fs, local         billy.Filesystem
-	sivafs            sivafs.SivaFS
+	sivafs            sivafs.SivaSync
 	tmpPath, origPath string
 	s                 storage.Storer
 }
@@ -132,7 +140,7 @@ func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
 	}
 	defer checkClose(src, &err)
 
-	dst, err := toFs.OpenFile(to, os.O_CREATE | os.O_TRUNC | os.O_WRONLY, os.FileMode(0644))
+	dst, err := toFs.OpenFile(to, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644))
 	if err != nil {
 		return err
 	}
