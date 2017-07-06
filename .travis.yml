@@ -4,12 +4,19 @@ go:
   - 1.8.1
   - tip
 
-go_import_path: gopkg.in/src-d/core-retireval.v0
+go_import_path: gopkg.in/src-d/core-retrieval.v0
 
 matrix:
   fast_finish: true
   allow_failures:
     - go: tip
+
+sudo: required
+
+services:
+  - docker
+  - rabbitmq
+  - postgresql
 
 install:
   - make dependencies

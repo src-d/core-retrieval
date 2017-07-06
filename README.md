@@ -2,3 +2,7 @@
 
 **core-retrieval** provides the models and services that are used across
 different Data Retrieval projects.
+
+It uses a simple
+[Dependency Injection Container](https://en.wikipedia.org/wiki/Dependency_injection)
+configured with environment variables.

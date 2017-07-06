@@ -1,5 +1,5 @@
 # Package configuration
-PROJECT = core-retireval
+PROJECT = core-retrieval
 COMMANDS =
 
 # Including ci Makefile
