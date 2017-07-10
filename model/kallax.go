@@ -1038,6 +1038,7 @@ type schemaRepositoryReferences struct {
 	Hash      kallax.SchemaField
 	Init      kallax.SchemaField
 	Roots     kallax.SchemaField
+	Time      kallax.SchemaField
 }
 
 func (s *schemaRepositoryReferences) At(n int) *schemaRepositoryReferences {
@@ -1049,6 +1050,7 @@ func (s *schemaRepositoryReferences) At(n int) *schemaRepositoryReferences {
 		Hash:            kallax.NewJSONSchemaArray("_references", fmt.Sprint(n), "Hash"),
 		Init:            kallax.NewJSONSchemaArray("_references", fmt.Sprint(n), "Init"),
 		Roots:           kallax.NewJSONSchemaArray("_references", fmt.Sprint(n), "Roots"),
+		Time:            kallax.NewJSONSchemaKey(kallax.JSONAny, "_references", fmt.Sprint(n), "Time"),
 	}
 }
 
@@ -1121,6 +1123,7 @@ var Schema = &schema{
 			Hash:            kallax.NewJSONSchemaArray("_references", "Hash"),
 			Init:            kallax.NewJSONSchemaArray("_references", "Init"),
 			Roots:           kallax.NewJSONSchemaArray("_references", "Roots"),
+			Time:            kallax.NewJSONSchemaKey(kallax.JSONAny, "_references", "Time"),
 		},
 	},
 }
