@@ -6,3 +6,9 @@ different Data Retrieval projects.
 It uses a simple
 [Dependency Injection Container](https://en.wikipedia.org/wiki/Dependency_injection)
 configured with environment variables.
+
+## License
+
+Licensed under the terms of the Apache License Version 2.0. See the `LICENSE`
+file for the full license text.
+
