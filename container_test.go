@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/src-d/framework.v0/lock"
 )
 
 func TestDatabase(t *testing.T) {
@@ -71,4 +72,21 @@ func TestTemporaryFilesystem(t *testing.T) {
 	fPath := f.Name()
 	defer func() { require.NoError(fs.Remove(fPath)) }()
 	require.NoError(f.Close())
+}
+
+func TestLocking(t *testing.T) {
+	require := require.New(t)
+
+	l1 := Locking()
+	require.NotNil(l1)
+
+	l2 := Locking()
+	require.Exactly(l1, l2)
+
+	s, err := l1.NewSession(&lock.SessionConfig{})
+	require.NoError(err)
+	require.NotNil(s)
+
+	err = s.Close()
+	require.NoError(err)
 }
