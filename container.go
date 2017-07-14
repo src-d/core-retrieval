@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/src-d/framework.v0/configurable"
 	"gopkg.in/src-d/framework.v0/database"
+	"gopkg.in/src-d/framework.v0/lock"
 	"gopkg.in/src-d/framework.v0/queue"
 	"gopkg.in/src-d/go-billy.v3"
 	"gopkg.in/src-d/go-billy.v3/osfs"
@@ -22,6 +23,7 @@ type containerConfig struct {
 	TempDir             string `default:"/tmp/sourced"`
 	Broker              string `default:"amqp://localhost:5672"`
 	RootRepositoriesDir string `default:"/tmp/root-repositories"`
+	Locking             string `default:"local:"`
 }
 
 var config = &containerConfig{}
@@ -37,6 +39,7 @@ var container struct {
 	ModelMentionStore    *model.MentionStore
 	RootedTransactioner  repository.RootedTransactioner
 	TempDirFilesystem    billy.Filesystem
+	Locking              lock.Service
 }
 
 // Broker returns a queue.Broker for the default queue system.
@@ -103,6 +106,20 @@ func TemporaryFilesystem() billy.Filesystem {
 	}
 
 	return container.TempDirFilesystem
+}
+
+// Locking returns a lock.Service that can be used to acquire namespaced locks.
+func Locking() lock.Service {
+	if container.Locking == nil {
+		service, err := lock.New(config.Locking)
+		if err != nil {
+			panic(err)
+		}
+
+		container.Locking = service
+	}
+
+	return container.Locking
 }
 
 // RootedTransactioner returns the default RootedTransactioner instance,
