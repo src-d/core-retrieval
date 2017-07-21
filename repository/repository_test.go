@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/colinmarc/hdfs"
 	"github.com/src-d/go-git-fixtures"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -20,6 +21,7 @@ import (
 
 const (
 	tmpPrefix = "core-retrieval-test"
+	hdfsURL   = "localhost:9000"
 )
 
 var (
@@ -41,6 +43,11 @@ func (s *FilesystemSuite) SetupTest() {
 }
 
 func (s *FilesystemSuite) TearDownTest() {
+	hc, err := hdfs.New(hdfsURL)
+	s.NoError(err)
+	err = hc.Remove("/")
+	s.NoError(err)
+
 	s.cleanUpTempDirectories()
 	s.NoError(fixtures.Clean())
 }
@@ -61,29 +68,35 @@ func (s *FilesystemSuite) cleanUpTempDirectories() {
 
 func (s *FilesystemSuite) Test() {
 	fsPairs := []*fsPair{
-		{"mem to mem", memfs.New(), memfs.New()},
-		{"mem to os", memfs.New(), s.newFilesystem()},
-		{"os to mem", s.newFilesystem(), memfs.New()},
-		{"os to os", s.newFilesystem(), s.newFilesystem()},
+		{"mem to mem", NewLocalCopier(memfs.New()), memfs.New()},
+		{"mem to os", NewLocalCopier(memfs.New()), s.newFilesystem()},
+		{"os to mem", NewLocalCopier(s.newFilesystem()), memfs.New()},
+		{"os to os", NewLocalCopier(s.newFilesystem()), s.newFilesystem()},
+		{"os to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath()), s.newFilesystem()},
+		{"mem to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath()), memfs.New()},
 	}
 
 	for _, fsPair := range fsPairs {
 		s.T().Run(fsPair.Name, func(t *testing.T) {
-			testRootedTransactioner(t, NewSivaRootedTransactioner(fsPair.From, fsPair.To))
+			testRootedTransactioner(t, NewSivaRootedTransactioner(fsPair.Copier, fsPair.Local))
 		})
 
 		s.T().Run(fmt.Sprintf("%s with real repository", fsPair.Name), func(t *testing.T) {
-			testWithRealRepository(t, NewSivaRootedTransactioner(fsPair.From, fsPair.To))
+			testWithRealRepository(t, NewSivaRootedTransactioner(fsPair.Copier, fsPair.Local))
 		})
 	}
 }
 
 func (s *FilesystemSuite) newFilesystem() billy.Filesystem {
-	require := require.New(s.T())
-	tmpDir, err := ioutil.TempDir(os.TempDir(), tmpPrefix)
-	require.NoError(err)
+	tmpDir := s.newTempPath()
 	s.tmpDirs[tmpDir] = true
 	return osfs.New(tmpDir)
+}
+
+func (s *FilesystemSuite) newTempPath() string {
+	tmpDir, err := ioutil.TempDir(os.TempDir(), tmpPrefix)
+	s.NoError(err)
+	return tmpDir
 }
 
 func testWithRealRepository(t *testing.T, s RootedTransactioner) {
@@ -218,7 +231,7 @@ func testRootedTransactioner(t *testing.T, s RootedTransactioner) {
 }
 
 type fsPair struct {
-	Name string
-	From billy.Filesystem
-	To   billy.Filesystem
+	Name   string
+	Copier Copier
+	Local  billy.Filesystem
 }

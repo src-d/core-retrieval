@@ -21,3 +21,8 @@ ensure-models-generated:
 		echo 'There are differences between the commited kallax.go and the one(s) generated right now'; \
 		exit 2; \
 	fi; \
+
+test-coverage: test-with-hdfs
+test: test-with-hdfs
+test-with-hdfs:
+	sh setup_hdfs.sh
