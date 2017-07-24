@@ -512,6 +512,8 @@ func (r *Repository) ColumnAddress(col string) (interface{}, error) {
 		return types.Nullable(&r.LastCommitAt), nil
 	case "_references":
 		return types.JSON(&r.References), nil
+	case "is_fork":
+		return types.Nullable(&r.IsFork), nil
 
 	default:
 		return nil, fmt.Errorf("kallax: invalid column in Repository: %s", col)
@@ -548,6 +550,11 @@ func (r *Repository) Value(col string) (interface{}, error) {
 		return r.LastCommitAt, nil
 	case "_references":
 		return types.JSON(r.References), nil
+	case "is_fork":
+		if r.IsFork == (*bool)(nil) {
+			return nil, nil
+		}
+		return r.IsFork, nil
 
 	default:
 		return nil, fmt.Errorf("kallax: invalid column in Repository: %s", col)
@@ -1028,6 +1035,7 @@ type schemaRepository struct {
 	FetchErrorAt kallax.SchemaField
 	LastCommitAt kallax.SchemaField
 	References   *schemaRepositoryReferences
+	IsFork       kallax.SchemaField
 }
 
 type schemaRepositoryReferences struct {
@@ -1106,6 +1114,7 @@ var Schema = &schema{
 			kallax.NewSchemaField("fetch_error_at"),
 			kallax.NewSchemaField("last_commit_at"),
 			kallax.NewSchemaField("_references"),
+			kallax.NewSchemaField("is_fork"),
 		),
 		ID:           kallax.NewSchemaField("id"),
 		CreatedAt:    kallax.NewSchemaField("created_at"),
@@ -1125,5 +1134,6 @@ var Schema = &schema{
 			Roots:           kallax.NewJSONSchemaArray("_references", "Roots"),
 			Time:            kallax.NewJSONSchemaKey(kallax.JSONAny, "_references", "Time"),
 		},
+		IsFork: kallax.NewSchemaField("is_fork"),
 	},
 }
