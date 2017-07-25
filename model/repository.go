@@ -34,6 +34,8 @@ type Repository struct {
 	// References is the current slice of references as present in our
 	// repository storage.
 	References []*Reference
+	// IsFork stores if this repository is a fork or not. It can be nil if we don't know.
+	IsFork *bool
 }
 
 // FetchStatus represents the fetch status of this repository.
