@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS repositories (
 	fetched_at timestamptz,
 	fetch_error_at timestamptz,
 	last_commit_at timestamptz,
+	is_fork boolean,
 	_references jsonb
 	);
 
