@@ -11,15 +11,22 @@ matrix:
   allow_failures:
     - go: tip
 
-sudo: required
+env:
+  - DBUSER=postgres DBPASS=
 
 services:
   - docker
   - rabbitmq
   - postgresql
 
+addons:
+  postgresql: "9.6"
+
 install:
   - make dependencies
+
+before_script:
+  - psql -c 'create database testing;' -U postgres
 
 script:
   - make test-coverage
