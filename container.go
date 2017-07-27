@@ -24,6 +24,7 @@ type containerConfig struct {
 	Broker              string `default:"amqp://localhost:5672"`
 	RootRepositoriesDir string `default:"/tmp/root-repositories"`
 	Locking             string `default:"local:"`
+	HDFS                string `default:""`
 }
 
 var config = &containerConfig{}
@@ -132,9 +133,16 @@ func RootedTransactioner() repository.RootedTransactioner {
 			panic(err)
 		}
 
+		var copier repository.Copier
+		if config.HDFS == "" {
+			copier = repository.NewLocalCopier(osfs.New(config.RootRepositoriesDir))
+		} else {
+			copier = repository.NewHDFSCopier(config.HDFS, config.RootRepositoriesDir)
+		}
+
 		container.RootedTransactioner =
 			repository.NewSivaRootedTransactioner(
-				osfs.New(config.RootRepositoriesDir),
+				copier,
 				tmpFs,
 			)
 	}

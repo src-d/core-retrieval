@@ -3,8 +3,6 @@ package repository
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"time"
 
@@ -36,8 +34,8 @@ type Tx interface {
 }
 
 type fsSrv struct {
-	fs    billy.Filesystem
-	local billy.Filesystem
+	copier Copier
+	local  billy.Filesystem
 }
 
 // NewSivaRootedTransactioner returns a RootedTransactioner for repositories
@@ -48,17 +46,17 @@ type fsSrv struct {
 // since it relies on copying between arbitrary filesystems. If a
 // Commit operation fails, the state of the first filesystem is unknown and can
 // be invalid.
-func NewSivaRootedTransactioner(fs, local billy.Filesystem) RootedTransactioner {
-	return &fsSrv{fs, local}
+func NewSivaRootedTransactioner(copier Copier, local billy.Filesystem) RootedTransactioner {
+	return &fsSrv{copier, local}
 }
 
 func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	origPath := fmt.Sprintf("%s.siva", h)
 	localPath := s.local.Join(h.String(), strconv.FormatInt(time.Now().UnixNano(), 10))
-	localSivaPath := localPath+ ".siva"
+	localSivaPath := localPath + ".siva"
 	localTmpPath := localPath + ".tmp"
 
-	if err := copyFile(s.fs, s.local, origPath, localSivaPath); err != nil {
+	if err := s.copier.CopyFromRemote(origPath, localSivaPath, s.local); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +86,7 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	}
 
 	return &fsTx{
-		fs:       s.fs,
+		copier:   s.copier,
 		local:    s.local,
 		sivafs:   fs,
 		origPath: origPath,
@@ -98,7 +96,8 @@ func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 }
 
 type fsTx struct {
-	fs, local         billy.Filesystem
+	copier            Copier
+	local             billy.Filesystem
 	sivafs            sivafs.SivaSync
 	tmpPath, origPath string
 	s                 storage.Storer
@@ -113,7 +112,7 @@ func (tx *fsTx) Commit() error {
 		return err
 	}
 
-	if err := copyFile(tx.local, tx.fs, tx.tmpPath, tx.origPath); err != nil {
+	if err := tx.copier.CopyToRemote(tx.tmpPath, tx.origPath, tx.local); err != nil {
 		_ = tx.cleanUp()
 		return err
 	}
@@ -127,31 +126,4 @@ func (tx *fsTx) Rollback() error {
 
 func (tx *fsTx) cleanUp() error {
 	return util.RemoveAll(tx.local, tx.tmpPath)
-}
-
-func copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
-	src, err := fromFs.Open(from)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-	defer checkClose(src, &err)
-
-	dst, err := toFs.OpenFile(to, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644))
-	if err != nil {
-		return err
-	}
-	defer checkClose(dst, &err)
-
-	_, err = io.Copy(dst, src)
-	return err
-}
-
-func checkClose(c io.Closer, err *error) {
-	if cerr := c.Close(); cerr != nil && *err == nil {
-		*err = cerr
-	}
 }
