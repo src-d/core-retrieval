@@ -37,12 +37,14 @@ func (r *Mention) ColumnAddress(col string) (interface{}, error) {
 		return &r.Timestamps.UpdatedAt, nil
 	case "endpoint":
 		return &r.Endpoint, nil
+	case "aliases":
+		return types.Slice(&r.Aliases), nil
+	case "is_fork":
+		return types.Nullable(&r.IsFork), nil
 	case "provider":
 		return &r.Provider, nil
 	case "vcs":
 		return (*string)(&r.VCS), nil
-	case "context":
-		return types.JSON(&r.Context), nil
 
 	default:
 		return nil, fmt.Errorf("kallax: invalid column in Mention: %s", col)
@@ -60,12 +62,17 @@ func (r *Mention) Value(col string) (interface{}, error) {
 		return r.Timestamps.UpdatedAt, nil
 	case "endpoint":
 		return r.Endpoint, nil
+	case "aliases":
+		return types.Slice(r.Aliases), nil
+	case "is_fork":
+		if r.IsFork == (*bool)(nil) {
+			return nil, nil
+		}
+		return r.IsFork, nil
 	case "provider":
 		return r.Provider, nil
 	case "vcs":
 		return (string)(r.VCS), nil
-	case "context":
-		return types.JSON(r.Context), nil
 
 	default:
 		return nil, fmt.Errorf("kallax: invalid column in Mention: %s", col)
@@ -359,6 +366,20 @@ func (q *MentionQuery) FindByUpdatedAt(cond kallax.ScalarCond, v time.Time) *Men
 // the Endpoint property is equal to the passed value.
 func (q *MentionQuery) FindByEndpoint(v string) *MentionQuery {
 	return q.Where(kallax.Eq(Schema.Mention.Endpoint, v))
+}
+
+// FindByAliases adds a new filter to the query that will require that
+// the Aliases property contains all the passed values; if no passed values,
+// it will do nothing.
+func (q *MentionQuery) FindByAliases(v ...string) *MentionQuery {
+	if len(v) == 0 {
+		return q
+	}
+	values := make([]interface{}, len(v))
+	for i, val := range v {
+		values[i] = val
+	}
+	return q.Where(kallax.ArrayContains(Schema.Mention.Aliases, values...))
 }
 
 // FindByProvider adds a new filter to the query that will require that
@@ -1019,9 +1040,10 @@ type schemaMention struct {
 	CreatedAt kallax.SchemaField
 	UpdatedAt kallax.SchemaField
 	Endpoint  kallax.SchemaField
+	Aliases   kallax.SchemaField
+	IsFork    kallax.SchemaField
 	Provider  kallax.SchemaField
 	VCS       kallax.SchemaField
-	Context   kallax.SchemaField
 }
 
 type schemaRepository struct {
@@ -1083,17 +1105,19 @@ var Schema = &schema{
 			kallax.NewSchemaField("created_at"),
 			kallax.NewSchemaField("updated_at"),
 			kallax.NewSchemaField("endpoint"),
+			kallax.NewSchemaField("aliases"),
+			kallax.NewSchemaField("is_fork"),
 			kallax.NewSchemaField("provider"),
 			kallax.NewSchemaField("vcs"),
-			kallax.NewSchemaField("context"),
 		),
 		ID:        kallax.NewSchemaField("id"),
 		CreatedAt: kallax.NewSchemaField("created_at"),
 		UpdatedAt: kallax.NewSchemaField("updated_at"),
 		Endpoint:  kallax.NewSchemaField("endpoint"),
+		Aliases:   kallax.NewSchemaField("aliases"),
+		IsFork:    kallax.NewSchemaField("is_fork"),
 		Provider:  kallax.NewSchemaField("provider"),
 		VCS:       kallax.NewSchemaField("vcs"),
-		Context:   kallax.NewSchemaField("context"),
 	},
 	Repository: &schemaRepository{
 		BaseSchema: kallax.NewBaseSchema(
