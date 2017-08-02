@@ -114,6 +114,19 @@ func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (er
 		return err
 	}
 
+	// TODO to avoid this, we should implement a 'truncate' flag in 'client.Create' method
+	_, err = c.client.Stat(p)
+	if err == nil {
+		err = c.client.Remove(p)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
 	rf, err := c.client.Create(p)
 	if err != nil {
 		return err
