@@ -47,10 +47,14 @@ const (
 	NotFound FetchStatus = "not_found"
 	// Fetched means that the remote repository was found, fetched and
 	// successfully stored.
-	Fetched = "fetched"
+	Fetched FetchStatus = "fetched"
 	// Pending is the default value, meaning that the repository has not
 	// been fetched yet.
-	Pending = "pending"
+	Pending FetchStatus = "pending"
+	// Fetching means the remote repository was found and started being
+	// fetched. It could also mean that there was an error and the repository
+	// never finished fetching.
+	Fetching FetchStatus = "fetching"
 )
 
 // Language represents a language name.
