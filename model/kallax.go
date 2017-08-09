@@ -16,6 +16,8 @@ import (
 var _ types.SQLType
 var _ fmt.Formatter
 
+type modelSaveFunc func(*kallax.Store) error
+
 // NewMention returns a new instance of Mention.
 func NewMention() (record *Mention) {
 	return newMention()
@@ -127,6 +129,9 @@ func (s *MentionStore) DebugWith(logger kallax.LoggerFunc) *MentionStore {
 // Insert inserts a Mention in the database. A non-persisted object is
 // required for this operation.
 func (s *MentionStore) Insert(record *Mention) error {
+	record.SetSaving(true)
+	defer record.SetSaving(false)
+
 	record.CreatedAt = record.CreatedAt.Truncate(time.Microsecond)
 	record.UpdatedAt = record.UpdatedAt.Truncate(time.Microsecond)
 
@@ -146,6 +151,9 @@ func (s *MentionStore) Insert(record *Mention) error {
 func (s *MentionStore) Update(record *Mention, cols ...kallax.SchemaField) (updated int64, err error) {
 	record.CreatedAt = record.CreatedAt.Truncate(time.Microsecond)
 	record.UpdatedAt = record.UpdatedAt.Truncate(time.Microsecond)
+
+	record.SetSaving(true)
+	defer record.SetSaving(false)
 
 	if err := record.BeforeSave(); err != nil {
 		return 0, err
@@ -630,6 +638,9 @@ func (s *RepositoryStore) DebugWith(logger kallax.LoggerFunc) *RepositoryStore {
 // Insert inserts a Repository in the database. A non-persisted object is
 // required for this operation.
 func (s *RepositoryStore) Insert(record *Repository) error {
+	record.SetSaving(true)
+	defer record.SetSaving(false)
+
 	record.CreatedAt = record.CreatedAt.Truncate(time.Microsecond)
 	record.UpdatedAt = record.UpdatedAt.Truncate(time.Microsecond)
 	if record.FetchedAt != nil {
@@ -667,6 +678,9 @@ func (s *RepositoryStore) Update(record *Repository, cols ...kallax.SchemaField)
 	if record.LastCommitAt != nil {
 		record.LastCommitAt = func(t time.Time) *time.Time { return &t }(record.LastCommitAt.Truncate(time.Microsecond))
 	}
+
+	record.SetSaving(true)
+	defer record.SetSaving(false)
 
 	if err := record.BeforeSave(); err != nil {
 		return 0, err
