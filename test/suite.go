@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
+	"gopkg.in/src-d/core-retrieval.v0/schema"
 	"gopkg.in/src-d/framework.v0/database"
 
 	"github.com/stretchr/testify/suite"
@@ -36,11 +36,7 @@ func (s *Suite) Setup() {
 	s.DB, err = database.Default(database.WithName(s.dbName))
 	require.NoError(err, "can't get default database with name %s", s.dbName)
 
-	bytes, err := ioutil.ReadFile(schemaPath)
-	require.NoError(err, "can't read schema file")
-
-	_, err = s.DB.Exec(string(bytes))
-	require.NoError(err, "can't create database schema")
+	require.NoError(schema.Create(s.DB), "can't create database schema")
 }
 
 func (s *Suite) TearDown() {
