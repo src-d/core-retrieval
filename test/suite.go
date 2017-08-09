@@ -22,22 +22,25 @@ type Suite struct {
 }
 
 func (s *Suite) Setup() {
+	require := s.Require()
 	s.dbName = fmt.Sprintf("db_%d", time.Now().UnixNano())
 	db, err := database.Default()
-	s.NoError(err)
+	require.NoError(err, "can't get default database")
+
+	require.NoError(db.Ping(), "unable to connect to the database")
 
 	_, err = db.Exec("CREATE DATABASE " + s.dbName)
-	s.NoError(err)
-	s.NoError(db.Close())
+	require.NoError(err, "can't create database %s", s.dbName)
+	s.NoError(db.Close(), "can't close database conn")
 
 	s.DB, err = database.Default(database.WithName(s.dbName))
-	s.NoError(err)
+	require.NoError(err, "can't get default database with name %s", s.dbName)
 
 	bytes, err := ioutil.ReadFile(schemaPath)
-	s.NoError(err)
+	require.NoError(err, "can't read schema file")
 
 	_, err = s.DB.Exec(string(bytes))
-	s.NoError(err)
+	require.NoError(err, "can't create database schema")
 }
 
 func (s *Suite) TearDown() {
