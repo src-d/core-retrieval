@@ -228,6 +228,22 @@ func testRootedTransactioner(t *testing.T, s RootedTransactioner) {
 	_, err = r3.Reference(refName1, false)
 	require.NoError(err)
 	require.NoError(tx3.Rollback())
+
+	// begin tx4
+	tx4, err := s.Begin(h1)
+	require.NoError(err)
+	require.NotNil(tx4)
+	r4, err := git.Open(tx4.Storer(), nil)
+	require.NoError(err)
+
+	// tx4 -> create ref4
+	refName4 := plumbing.ReferenceName("ref4")
+	err = r4.Storer.SetReference(plumbing.NewSymbolicReference(refName4, refName4))
+	require.NoError(err)
+
+	// commit tx4
+	err = tx4.Commit()
+	require.NoError(err)
 }
 
 type fsPair struct {
