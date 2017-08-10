@@ -20,9 +20,9 @@ const transactionerLocalDir = "transactioner"
 
 type containerConfig struct {
 	configurable.BasicConfiguration
-	TempDir             string `default:"/tmp/sourced"`
+	TempDir             string `default:"/tmp/sourced" split_words:"true"`
 	Broker              string `default:"amqp://localhost:5672"`
-	RootRepositoriesDir string `default:"/tmp/root-repositories"`
+	RootRepositoriesDir string `default:"/tmp/root-repositories" split_words:"true"`
 	Locking             string `default:"local:"`
 	HDFS                string `default:""`
 }
