@@ -9,6 +9,20 @@ import (
 	"gopkg.in/src-d/go-billy.v3"
 )
 
+// addBucketName prepends the bucket dir name to the file name. The number of
+// characters used for the directory are specified by bucketSize. A value of 0
+// in bucketSize returns the name as is.
+func addBucketName(name string, bucketSize int) string {
+	if bucketSize > 0 {
+		bucket := string(name[0:bucketSize])
+		newPath := path.Join(bucket, name)
+
+		return newPath
+	}
+
+	return name
+}
+
 // Copier is in charge either to obtain a file from the Remote filesystem implementation,
 // or send it from local.
 type Copier interface {
@@ -17,20 +31,23 @@ type Copier interface {
 }
 
 // NewLocalCopier returns a Copier using as a remote a Billy filesystem
-func NewLocalCopier(fs billy.Filesystem) Copier {
-	return &LocalCopier{fs}
+func NewLocalCopier(fs billy.Filesystem, bucket int) Copier {
+	return &LocalCopier{fs, bucket}
 }
 
 type LocalCopier struct {
-	fs billy.Filesystem
+	fs         billy.Filesystem
+	bucketSize int
 }
 
 func (c *LocalCopier) CopyFromRemote(src, dst string, localFs billy.Filesystem) error {
-	return c.copyFile(c.fs, localFs, src, dst)
+	bSrc := addBucketName(src, c.bucketSize)
+	return c.copyFile(c.fs, localFs, bSrc, dst)
 }
 
 func (c *LocalCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) error {
-	return c.copyFile(localFs, c.fs, src, dst)
+	bDst := addBucketName(dst, c.bucketSize)
+	return c.copyFile(localFs, c.fs, src, bDst)
 }
 
 func (c *LocalCopier) copyFile(fromFs, toFs billy.Filesystem, from, to string) (err error) {
@@ -56,14 +73,15 @@ func (c *LocalCopier) copyFile(fromFs, toFs billy.Filesystem, from, to string) (
 
 // NewHDFSCopier returns a copier using as a remote an HDFS cluster.
 // URL is the hdfs connection URL and base is the base path to store all the files.
-func NewHDFSCopier(URL string, base string) Copier {
-	return &HDFSCopier{url: URL, base: base}
+func NewHDFSCopier(URL string, base string, bucket int) Copier {
+	return &HDFSCopier{url: URL, base: base, bucketSize: bucket}
 }
 
 type HDFSCopier struct {
-	url    string
-	base   string
-	client *hdfs.Client
+	url        string
+	base       string
+	client     *hdfs.Client
+	bucketSize int
 }
 
 // CopyFromRemote copies the file from HDFS to the provided billy Filesystem. If the file exists locally is overridden.
@@ -73,7 +91,8 @@ func (c *HDFSCopier) CopyFromRemote(src, dst string, localFs billy.Filesystem) (
 		return err
 	}
 
-	rf, err := c.client.Open(path.Join(c.base, src))
+	bSrc := addBucketName(src, c.bucketSize)
+	rf, err := c.client.Open(path.Join(c.base, bSrc))
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -96,7 +115,8 @@ func (c *HDFSCopier) CopyFromRemote(src, dst string, localFs billy.Filesystem) (
 // If other writer is actually copying the same file to HDFS this method will throw an error because the WORM principle
 // (Write Once Read Many).
 func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (err error) {
-	p := path.Join(c.base, dst)
+	bDst := addBucketName(dst, c.bucketSize)
+	p := path.Join(c.base, bDst)
 	if err := c.initializeClient(); err != nil {
 		return err
 	}
