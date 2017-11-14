@@ -124,7 +124,7 @@ func testWithRealRepository(t *testing.T, s RootedTransactioner) {
 	r, err := git.Open(tx.Storer(), nil)
 	require.NoError(err)
 	_, err = r.CreateRemote(&config.RemoteConfig{
-		URL:  f.Worktree().Root(),
+		URLs: []string{f.Worktree().Root()},
 		Name: git.DefaultRemoteName,
 	})
 	require.NoError(err)
