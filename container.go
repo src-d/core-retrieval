@@ -25,6 +25,7 @@ type containerConfig struct {
 	RootRepositoriesDir string `default:"/tmp/root-repositories" split_words:"true"`
 	Locking             string `default:"local:"`
 	HDFS                string `default:""`
+	BucketSize          int    `default:0`
 }
 
 var config = &containerConfig{}
@@ -135,9 +136,11 @@ func RootedTransactioner() repository.RootedTransactioner {
 
 		var copier repository.Copier
 		if config.HDFS == "" {
-			copier = repository.NewLocalCopier(osfs.New(config.RootRepositoriesDir))
+			copier = repository.NewLocalCopier(
+				osfs.New(config.RootRepositoriesDir), config.BucketSize)
 		} else {
-			copier = repository.NewHDFSCopier(config.HDFS, config.RootRepositoriesDir)
+			copier = repository.NewHDFSCopier(
+				config.HDFS, config.RootRepositoriesDir, config.BucketSize)
 		}
 
 		container.RootedTransactioner =
