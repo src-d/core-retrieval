@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/colinmarc/hdfs"
-	"gopkg.in/src-d/go-billy.v3"
+	"gopkg.in/src-d/go-billy.v4"
 )
 
 // addBucketName prepends the bucket dir name to the file name. The number of
