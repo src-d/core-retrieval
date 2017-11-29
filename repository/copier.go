@@ -111,6 +111,16 @@ func (c *HDFSCopier) CopyFromRemote(src, dst string, localFs billy.Filesystem) (
 	return
 }
 
+func (c *HDFSCopier) deleteIfExists(file string) error {
+	if _, err := c.client.Stat(file); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	return c.client.Remove(file)
+}
+
 // CopyToRemote copies from the provided billy Filesystem to HDFS. If the file exists on HDFS it will be overridden.
 // If other writer is actually copying the same file to HDFS this method will throw an error because the WORM principle
 // (Write Once Read Many).
@@ -120,6 +130,8 @@ func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (er
 	if err := c.initializeClient(); err != nil {
 		return err
 	}
+
+	pCopy := p + ".copy"
 
 	lf, err := localFs.Open(src)
 	if os.IsNotExist(err) {
@@ -135,25 +147,37 @@ func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (er
 	}
 
 	// TODO to avoid this, we should implement a 'truncate' flag in 'client.Create' method
-	_, err = c.client.Stat(p)
-	if err == nil {
-		err = c.client.Remove(p)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	rf, err := c.client.Create(p)
+	err = c.deleteIfExists(pCopy)
 	if err != nil {
 		return err
 	}
-	defer checkClose(rf, &err)
+
+	rf, err := c.client.Create(pCopy)
+	if err != nil {
+		return err
+	}
+
+	// Delete temporary file in case the process is stopped while copying
+	defer func() {
+		rf.Close()
+		c.deleteIfExists(pCopy)
+	}()
 
 	_, err = io.Copy(rf, lf)
+
+	checkClose(rf, &err)
+
+	if err != nil {
+		c.client.Remove(pCopy)
+		return err
+	}
+
+	err = c.client.Rename(pCopy, p)
+
+	if err != nil {
+		return err
+	}
+
 	return
 }
 
