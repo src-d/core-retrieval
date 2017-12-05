@@ -3,6 +3,7 @@ package repository
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -52,9 +53,10 @@ func NewSivaRootedTransactioner(copier Copier, local billy.Filesystem) RootedTra
 
 func (s *fsSrv) Begin(h plumbing.Hash) (Tx, error) {
 	origPath := fmt.Sprintf("%s.siva", h)
-	localPath := s.local.Join(h.String(), strconv.FormatInt(time.Now().UnixNano(), 10))
-	localSivaPath := localPath + ".siva"
-	localTmpPath := localPath + ".tmp"
+	localPath := s.local.Join(
+		fmt.Sprintf("%s_%s", h.String(), strconv.FormatInt(time.Now().UnixNano(), 10)))
+	localSivaPath := filepath.Join(localPath, "siva")
+	localTmpPath := filepath.Join(localPath, "tmp")
 
 	if err := s.copier.CopyFromRemote(origPath, localSivaPath, s.local); err != nil {
 		return nil, err
@@ -125,5 +127,6 @@ func (tx *fsTx) Rollback() error {
 }
 
 func (tx *fsTx) cleanUp() error {
-	return util.RemoveAll(tx.local, tx.tmpPath)
+	path := filepath.Dir(tx.tmpPath)
+	return util.RemoveAll(tx.local, path)
 }
