@@ -21,6 +21,7 @@ const transactionerLocalDir = "transactioner"
 type containerConfig struct {
 	configurable.BasicConfiguration
 	TempDir             string `default:"/tmp/sourced" split_words:"true"`
+	CleanTempDir        bool   `default:"false" split_words:"true"`
 	Broker              string `default:"amqp://localhost:5672"`
 	RootRepositoriesDir string `default:"/tmp/root-repositories" split_words:"true"`
 	Locking             string `default:"local:"`
@@ -95,6 +96,10 @@ func ModelRepositoryStore() *model.RepositoryStore {
 // temporary files. This directory is dedicated to the running application.
 func TemporaryFilesystem() billy.Filesystem {
 	if container.TempDirFilesystem == nil {
+		if config.CleanTempDir {
+			os.RemoveAll(config.TempDir)
+		}
+
 		if err := os.MkdirAll(config.TempDir, os.FileMode(0755)); err != nil {
 			panic(err)
 		}
