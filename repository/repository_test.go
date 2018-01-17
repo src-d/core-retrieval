@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/colinmarc/hdfs"
-	"github.com/src-d/go-git-fixtures"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
 	"gopkg.in/src-d/go-billy.v4/osfs"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
