@@ -1,6 +1,7 @@
 # Package configuration
 PROJECT = core-retrieval
 COMMANDS =
+GOFLAGS = -tags norwfs
 
 # Including ci Makefile
 MAKEFILE = Makefile.main
