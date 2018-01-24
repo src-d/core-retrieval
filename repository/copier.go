@@ -73,13 +73,19 @@ func (c *LocalCopier) copyFile(fromFs, toFs billy.Filesystem, from, to string) (
 
 // NewHDFSCopier returns a copier using as a remote an HDFS cluster.
 // URL is the hdfs connection URL and base is the base path to store all the files.
-func NewHDFSCopier(URL string, base string, bucket int) Copier {
-	return &HDFSCopier{url: URL, base: base, bucketSize: bucket}
+// tmpBase is the path to store all temporary .copy files while copying, which defaults
+// to base if empty.
+func NewHDFSCopier(URL, base, tmpBase string, bucket int) Copier {
+	if tmpBase == "" {
+		tmpBase = base
+	}
+	return &HDFSCopier{url: URL, base: base, tmpBase: tmpBase, bucketSize: bucket}
 }
 
 type HDFSCopier struct {
 	url        string
 	base       string
+	tmpBase    string
 	client     *hdfs.Client
 	bucketSize int
 }
@@ -131,7 +137,7 @@ func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (er
 		return err
 	}
 
-	pCopy := p + ".copy"
+	pCopy := path.Join(c.tmpBase, dst+".copy")
 
 	lf, err := localFs.Open(src)
 	if os.IsNotExist(err) {
@@ -143,6 +149,10 @@ func (c *HDFSCopier) CopyToRemote(src, dst string, localFs billy.Filesystem) (er
 	defer checkClose(lf, &err)
 
 	if err := c.client.MkdirAll(path.Dir(p), os.FileMode(0644)); err != nil {
+		return err
+	}
+
+	if err := c.client.MkdirAll(path.Dir(pCopy), os.FileMode(0644)); err != nil {
 		return err
 	}
 

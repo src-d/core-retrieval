@@ -72,15 +72,15 @@ func (s *FilesystemSuite) Test() {
 		{"mem to os", NewLocalCopier(memfs.New(), 0), s.newFilesystem()},
 		{"os to mem", NewLocalCopier(s.newFilesystem(), 0), memfs.New()},
 		{"os to os", NewLocalCopier(s.newFilesystem(), 0), s.newFilesystem()},
-		{"os to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), 0), s.newFilesystem()},
-		{"mem to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), 0), memfs.New()},
+		{"os to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), s.newTempPath(), 0), s.newFilesystem()},
+		{"mem to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), s.newTempPath(), 0), memfs.New()},
 
 		{"mem to mem", NewLocalCopier(memfs.New(), 2), memfs.New()},
 		{"mem to os", NewLocalCopier(memfs.New(), 2), s.newFilesystem()},
 		{"os to mem", NewLocalCopier(s.newFilesystem(), 2), memfs.New()},
 		{"os to os", NewLocalCopier(s.newFilesystem(), 2), s.newFilesystem()},
-		{"os to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), 2), s.newFilesystem()},
-		{"mem to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), 2), memfs.New()},
+		{"os to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), s.newTempPath(), 2), s.newFilesystem()},
+		{"mem to HDFS", NewHDFSCopier(hdfsURL, s.newTempPath(), s.newTempPath(), 2), memfs.New()},
 	}
 
 	for _, fsPair := range fsPairs {

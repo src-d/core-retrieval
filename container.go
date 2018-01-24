@@ -145,7 +145,7 @@ func RootedTransactioner() repository.RootedTransactioner {
 				osfs.New(config.RootRepositoriesDir), config.BucketSize)
 		} else {
 			copier = repository.NewHDFSCopier(
-				config.HDFS, config.RootRepositoriesDir, config.BucketSize)
+				config.HDFS, config.RootRepositoriesDir, config.TempDir, config.BucketSize)
 		}
 
 		container.RootedTransactioner =
