@@ -88,11 +88,11 @@ func (s *FilesystemSuite) Test() {
 		},
 		{
 			"os to HDFS",
-			NewCopier(s.newFilesystem(), NewHDFSFs(hdfsURL, s.newTempPath(), s.newTempPath()), 0),
+			NewCopier(s.newFilesystem(), NewHDFSFs(hdfsURL, s.newTempPath()), 0),
 		},
 		{
 			"mem to HDFS",
-			NewCopier(memfs.New(), NewHDFSFs(hdfsURL, s.newTempPath(), s.newTempPath()), 0),
+			NewCopier(memfs.New(), NewHDFSFs(hdfsURL, s.newTempPath()), 0),
 		},
 
 		{
@@ -113,11 +113,11 @@ func (s *FilesystemSuite) Test() {
 		},
 		{
 			"os to HDFS with bucketing",
-			NewCopier(s.newFilesystem(), NewHDFSFs(hdfsURL, s.newTempPath(), s.newTempPath()), 2),
+			NewCopier(s.newFilesystem(), NewHDFSFs(hdfsURL, s.newTempPath()), 2),
 		},
 		{
 			"mem to HDFS with bucketing",
-			NewCopier(memfs.New(), NewHDFSFs(hdfsURL, s.newTempPath(), s.newTempPath()), 2),
+			NewCopier(memfs.New(), NewHDFSFs(hdfsURL, s.newTempPath()), 2),
 		},
 	}
 
