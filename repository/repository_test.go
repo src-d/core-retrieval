@@ -18,6 +18,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -68,8 +69,8 @@ func (s *FilesystemSuite) cleanUpTempDirectories() {
 	require.NoError(err)
 }
 
-func (s *FilesystemSuite) Test() {
-	fsPairs := []*fsPair{
+func (s *FilesystemSuite) getPairs() []*fsPair {
+	return []*fsPair{
 		{
 			"mem to mem",
 			NewCopier(memfs.New(), NewLocalFs(memfs.New()), 0),
@@ -120,6 +121,10 @@ func (s *FilesystemSuite) Test() {
 			NewCopier(memfs.New(), NewHDFSFs(hdfsURL, s.newTempPath()), 2),
 		},
 	}
+}
+
+func (s *FilesystemSuite) Test() {
+	fsPairs := s.getPairs()
 
 	for _, fsPair := range fsPairs {
 		s.T().Run(fsPair.Name, func(t *testing.T) {
@@ -128,6 +133,22 @@ func (s *FilesystemSuite) Test() {
 
 		s.T().Run(fmt.Sprintf("%s with real repository", fsPair.Name), func(t *testing.T) {
 			testWithRealRepository(t, NewSivaRootedTransactioner(fsPair.Copier))
+		})
+	}
+}
+
+func (s *FilesystemSuite) TestWithCache() {
+	fsPairs := s.getPairs()
+
+	for _, fsPair := range fsPairs {
+		c := cache.NewObjectLRU(16 * cache.MiByte)
+		s.T().Run(fmt.Sprintf("%s with cache", fsPair.Name), func(t *testing.T) {
+			testRootedTransactioner(t, NewSivaRootedTransactionerWithCache(fsPair.Copier, c))
+		})
+
+		c = cache.NewObjectLRU(16 * cache.MiByte)
+		s.T().Run(fmt.Sprintf("%s with real repository and cache", fsPair.Name), func(t *testing.T) {
+			testWithRealRepository(t, NewSivaRootedTransactionerWithCache(fsPair.Copier, c))
 		})
 	}
 }
