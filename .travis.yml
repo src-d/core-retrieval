@@ -29,6 +29,9 @@ addons:
   postgresql: "9.6"
 
 install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - touch Gopkg.toml
+  - dep ensure -v -add "github.com/coreos/etcd@3.3.10"
   - make dependencies
 
 before_script:
