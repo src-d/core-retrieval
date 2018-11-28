@@ -29,7 +29,11 @@ addons:
   postgresql: "9.6"
 
 install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - touch Gopkg.toml
+  - dep ensure -v -add "github.com/coreos/etcd@3.3.10" "github.com/satori/go.uuid@b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
   - make dependencies
+  - go get -v gopkg.in/src-d/go-kallax.v1/...
 
 before_script:
   - psql -c 'create database testing;' -U postgres
